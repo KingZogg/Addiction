@@ -13,13 +13,13 @@
 DHT_Unified dht(DHT11_PIN, DHTTYPE);
 uint32_t delayMS;
 
-float humidity, temp;  // Values read from sensor
-unsigned long previousMillis = 0;
-const long interval = 15000;          // interval at which to read sensor / Update values
+int Humidity;
+int Temperature;
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
 char auth[] = "9dc40c70df194d6cbdf469efcfc2193e";
+BlynkTimer timer;
 
 // Your WiFi credentials.
 // Set password to "" for open networks.
@@ -37,33 +37,19 @@ const int ledPin =  1;      // the number of the LED pin
 int buttonState = 0;         // variable for reading the pushbutton status
 
 
-BLYNK_WRITE(V1) {
-  switch (param.asInt())
-  {
-    case 1: // Item 1
-      Serial.println("Item 1 selected");
-      break;
-    case 2: // Item 2
-      Serial.println("Item 2 selected");
-      break;
-    case 3: // Item 3
-      Serial.println("Item 3 selected");
-      break;
-    default:
-      Serial.println("Unknown item selected");
-  }
-}
+
 
 void setup()
 {
-  // Debug console
+  
   Serial.begin(9600);
+  Serial.println("Serial Begin");
 
   Blynk.begin(auth, ssid, pass);
   // You can also specify server:
   //Blynk.begin(auth, ssid, pass, "blynk-cloud.com", 8442);
   //Blynk.begin(auth, ssid, pass, IPAddress(192,168,1,100), 8442);
-
+  timer.setInterval(1000L, TimerEvents);
 // initialize the LED pin as an output:
   pinMode(ledPin, OUTPUT);
   // initialize the pushbutton pin as an input:
@@ -72,19 +58,42 @@ void setup()
   dht.begin();
  }
 
+// This function sends Arduino's up time every second to Virtual Pin (5).
+// In the app, Widget's reading frequency should be set to PUSH. This means
+// that you define how often to send data to Blynk App.
+
+void TimerEvents()
+{
+	// You can send any value at any time.
+	// Please don't send more that 10 values per second.
+	Blynk.virtualWrite(V0, millis() / 1000);
+	Blynk.virtualWrite(V1, millis() / 1000);
+}
+
+BLYNK_WRITE(V1) {
+	switch (param.asInt())
+	{
+	case 1: // Item 1
+		Serial.println("Item 1 selected");
+		break;
+	case 2: // Item 2
+		Serial.println("Item 2 selected");
+		break;
+	case 3: // Item 3
+		Serial.println("Item 3 selected");
+		break;
+	default:
+		Serial.println("Unknown item selected");
+	}
+}
+
 void gettemperature() {
-	unsigned long currentMillis = millis();
-
-	if (currentMillis - previousMillis >= interval) {
-		// save the last time you read the sensor 
-		previousMillis = currentMillis;
-
-		// Reading temperature for humidity takes about 250 milliseconds!
-		// Sensor readings may also be up to 2 seconds 'old' (it's a very slow sensor)
+	Serial.println("Enter temp/humidity");
 		
 		// Get temperature event and print its value.
 		sensors_event_t event;
-		dht.temperature().getEvent(&event);
+		Temperature = dht.temperature().getEvent(&event);
+		
 		if (isnan(event.temperature)) {
 			Serial.println("Error reading temperature!");
 		}
@@ -94,13 +103,17 @@ void gettemperature() {
 			Serial.println(" *C");
 		}
 		// Get humidity event and print its value.
-		dht.humidity().getEvent(&event);
+		Humidity = dht.humidity().getEvent(&event);
 		if (isnan(event.relative_humidity)) {
 			Serial.println("Error reading humidity!");
 
 		
-		Blynk.virtualWrite(V0, event.temperature);
-		Blynk.virtualWrite(V1, event.relative_humidity);
+		Blynk.virtualWrite(V0, Temperature);
+		Blynk.virtualWrite(V1, Humidity);
+		
+		//BLYNK_WRITE(V1) {
+		//	int humidity = param.asInt();
+		//}
 
 		// Check if any reads failed and exit early (to try again).
 		if (isnan(event.relative_humidity) || isnan(event.temperature)) {
@@ -111,28 +124,31 @@ void gettemperature() {
 }
 
 
-}
+
+
+
+
 
 void loop()
 {
-  Blynk.run();
- 
-  gettemperature();
-  
-  // read the state of the pushbutton value:
-  buttonState = digitalRead(buttonPin);
-
-  // check if the pushbutton is pressed.
-  // if it is, the buttonState is HIGH:
-  if (buttonState == HIGH) {
-    // turn LED on:
-    digitalWrite(ledPin, HIGH);
-    Serial.println ("On");
-  } else {
-    // turn LED off:
-    digitalWrite(ledPin, LOW);
-    Serial.println ("Off");
-
+	Blynk.run();
+	timer.run(); // Initiates BlynkTimer
 	
-  }
+	/*{
+		buttonState = digitalRead(buttonPin);
+
+		// check if the pushbutton is pressed.
+		// if it is, the buttonState is HIGH:
+		if (buttonState == HIGH) {
+			// turn LED on:
+			digitalWrite(ledPin, HIGH);
+			Serial.println("On");
+		}
+		else {
+			// turn LED off:
+			digitalWrite(ledPin, LOW);
+			Serial.println("Off");
+
+
+		}*/
 }
